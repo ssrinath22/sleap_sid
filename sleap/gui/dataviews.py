@@ -538,6 +538,52 @@ class SuggestionsTableModel(GenericTableModel):
         self.context.labels.set_suggestions(resorted_suggestions)
 
 
+class LabelsTableModel(GenericTableModel):
+    properties = ("video", "frame", "labeled", "mean score")
+
+    def item_to_data(self, obj, item):
+        labels = self.context.labels
+        item_dict = dict()
+
+        item_dict["LabeledFrame"] = item
+
+        video_string = (
+            f"{labels.videos.index(item.video)+1}: "
+            f"{os.path.basename(item.video.filename)}"
+        )
+
+        item_dict["video"] = video_string
+        item_dict["frame"] = int(item.frame_idx) + 1  # start at frame 1 rather than 0
+
+        # show how many labeled instances are in this frame
+        lf = labels.get((item.video, item.frame_idx), use_cache=True)
+        val = 0 if lf is None else len(lf.user_instances)
+        val = str(val) if val > 0 else ""
+        item_dict["labeled"] = val
+
+        # calculate score for frame
+        scores = [
+            inst.score
+            for lf in labels.find(item.video, item.frame_idx)
+            for inst in lf
+            if hasattr(inst, "score")
+        ]
+        val = sum(scores) / len(scores) if scores else ""
+        item_dict["mean score"] = val
+
+        return item_dict
+
+    def sort(self, column_idx: int, order: QtCore.Qt.SortOrder):
+        """Sorts table by given column and order."""
+
+        super(LabelsTableModel, self).sort(column_idx, order)
+
+        # # Update order in project (so order can be saved and affects what we
+        # # consider previous/next suggestion for navigation).
+        # resorted_labeled_frames = [item["LabeledFrame"] for item in self._data]
+        # self.context.labels.set_suggestions(resorted_suggestions)
+
+
 class SkeletonNodeModel(QtCore.QStringListModel):
     """
     String list model for source/destination nodes of edges.

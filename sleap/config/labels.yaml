@@ -1,0 +1,16 @@
+main:
+  - name: target
+    label: Target
+    type: stacked
+    options: "all videos,current video"
+    default: "current video"
+
+    # Type is stacked because this makes the boxes aligned.
+
+    "all videos":
+    "current video":
+
+  - name: show_labels_button
+    label: Show Labeled Frames
+    type: button
+    default: main action

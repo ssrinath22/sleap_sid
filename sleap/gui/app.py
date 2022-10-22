@@ -73,6 +73,7 @@ from sleap.gui.widgets.video import QtVideoPlayer
 from sleap.gui.widgets.slider import set_slider_marks_from_labels
 from sleap.gui.dataviews import (
     GenericTableView,
+    LabelsTableModel,
     VideosTableModel,
     SkeletonNodesTableModel,
     SkeletonEdgesTableModel,
@@ -1111,6 +1112,79 @@ class MainWindow(QMainWindow):
 
         self.state.connect("suggestion_idx", self.suggestionsTable.selectRow)
 
+        ####### Labels #######
+        labels_layout = _make_dock(
+            "Labeled Frames", tab_with=videos_layout.parent().parent()
+        )
+        self.labelsTable = GenericTableView(
+            state=self.state,
+            is_sortable=True,
+            model=LabelsTableModel(
+                items=self.labels.labeled_frames, context=self.commands
+            ),
+        )
+
+        labels_layout.addWidget(self.labelsTable)
+
+        hb = QHBoxLayout()
+
+        # TODO(LM): Add command to go to previous Labeled Frame in table
+        _add_button(
+            hb,
+            "Previous",
+            self.process_events_then(self.commands.prevSuggestedFrame),
+            "goto previous labeled frame",
+        )
+    
+        # TODO(LM): Add command to go to remove Labeled Frame in table
+        _add_button(
+            hb,
+            "Remove",
+            self.process_events_then(self.commands.removeSuggestion),
+            "remove labeled frame",
+        )
+
+        # TODO(LM): Add command to go to next Labeled Frame in table
+        _add_button(
+            hb,
+            "Next",
+            self.process_events_then(self.commands.nextSuggestedFrame),
+            "goto next labeled frame",
+        )
+
+        hbw = QWidget()
+        hbw.setLayout(hb)
+        labels_layout.addWidget(hbw)
+
+        hb = QHBoxLayout()
+
+        self.labels_count_label = QLabel()
+        hb.addWidget(self.labels_count_label)
+
+        hbw = QWidget()
+        hbw.setLayout(hb)
+        labels_layout.addWidget(hbw)
+
+        # TODO(LM): Add command to show labels.
+        self.labels_form_widget = YamlFormWidget.from_name(
+            "labels",
+            title="Show Labels",
+        )
+        self.labels_form_widget.mainAction.connect(
+            self.process_events_then(self.commands.generateSuggestions)
+        )
+        labels_layout.addWidget(self.labels_form_widget)
+
+        def goto_labeled_frame(*args):
+            selected_frame = self.labelsTable.getSelectedRowItem()
+            self.commands.gotoVideoAndFrame(
+                selected_frame.video, selected_frame.frame_idx
+            )
+
+        self.suggestionsTable.doubleClicked.connect(goto_labeled_frame)
+
+        self.state.connect("suggestion_idx", self.labelsTable.selectRow)
+
         ####### Instances #######
         instances_layout = _make_dock(
             "Instances", tab_with=videos_layout.parent().parent()
@@ -1274,6 +1348,7 @@ class MainWindow(QMainWindow):
             ]
         ):
             self._update_seekbar_marks()
+            self.labelsTable.model().items = self.labels.labeled_frames
 
         if _has_topic(
             [UpdateTopic.frame, UpdateTopic.project_instances, UpdateTopic.tracks]
