@@ -556,6 +556,14 @@ class CommandContext:
     def generateSuggestions(self, params: Dict):
         """Generates suggestions using given params dictionary."""
         self.execute(GenerateSuggestions, **params)
+    
+    def showLabels(self, params: Dict):
+        """Show labels using given params dictionary."""
+        self.execute(ShowLabels, **params)
+    
+    def removeLabeledFrame(self):
+        """Remove the selected frame from labeled frames."""
+        self.execute(RemoveLabeledFrame)
 
     def openWebsite(self, url):
         """Open a website from URL using the native system browser."""
@@ -2485,6 +2493,27 @@ class ClearSuggestions(EditCommand):
     @classmethod
     def do_action(cls, context: CommandContext, params: dict):
         context.labels.clear_suggestions()
+
+
+class ShowLabels(EditCommand):
+    # BUG(LM): GUI does not update until scroll/resize 
+    def do_action(context: CommandContext, params: Dict):
+        if params["target"] == "all videos":
+            context.app.labelsTable.model().items = context.labels.labeled_frames
+        else:
+            items = context.labels.get(context.state["video"])
+            context.app.labelsTable.model().items = [] if items is None else items
+
+
+class RemoveLabeledFrame(EditCommand):
+    # BUG(LM): Does not remove the labeled frame
+    @classmethod
+    def do_action(cls, context: CommandContext, params: dict):
+        selected_frame = context.app.labelsTable.getSelectedRowItem()
+        if selected_frame is not None:
+            context.labels.remove(
+                selected_frame
+            )
 
 
 class MergeProject(EditCommand):

@@ -1031,7 +1031,7 @@ class MainWindow(QMainWindow):
 
         ####### Suggestions #######
         suggestions_layout = _make_dock(
-            "Labeling Suggestions", tab_with=videos_layout.parent().parent()
+            "Suggestions", tab_with=videos_layout.parent().parent()
         )
         self.suggestionsTable = GenericTableView(
             state=self.state,
@@ -1114,7 +1114,7 @@ class MainWindow(QMainWindow):
 
         ####### Labels #######
         labels_layout = _make_dock(
-            "Labeled Frames", tab_with=videos_layout.parent().parent()
+            "Labels", tab_with=videos_layout.parent().parent()
         )
         self.labelsTable = GenericTableView(
             state=self.state,
@@ -1128,11 +1128,10 @@ class MainWindow(QMainWindow):
 
         hb = QHBoxLayout()
 
-        # TODO(LM): Add command to go to previous Labeled Frame in table
         _add_button(
             hb,
             "Previous",
-            self.process_events_then(self.commands.prevSuggestedFrame),
+            self.process_events_then(self.commands.previousLabeledFrame),
             "goto previous labeled frame",
         )
     
@@ -1144,22 +1143,12 @@ class MainWindow(QMainWindow):
             "remove labeled frame",
         )
 
-        # TODO(LM): Add command to go to next Labeled Frame in table
         _add_button(
             hb,
             "Next",
-            self.process_events_then(self.commands.nextSuggestedFrame),
+            self.process_events_then(self.commands.nextLabeledFrame),
             "goto next labeled frame",
         )
-
-        hbw = QWidget()
-        hbw.setLayout(hb)
-        labels_layout.addWidget(hbw)
-
-        hb = QHBoxLayout()
-
-        self.labels_count_label = QLabel()
-        hb.addWidget(self.labels_count_label)
 
         hbw = QWidget()
         hbw.setLayout(hb)
@@ -1171,7 +1160,7 @@ class MainWindow(QMainWindow):
             title="Show Labels",
         )
         self.labels_form_widget.mainAction.connect(
-            self.process_events_then(self.commands.generateSuggestions)
+            self.process_events_then(self.commands.showLabels)
         )
         labels_layout.addWidget(self.labels_form_widget)
 
@@ -1181,9 +1170,16 @@ class MainWindow(QMainWindow):
                 selected_frame.video, selected_frame.frame_idx
             )
 
-        self.suggestionsTable.doubleClicked.connect(goto_labeled_frame)
+        self.labelsTable.doubleClicked.connect(goto_labeled_frame)
 
-        self.state.connect("suggestion_idx", self.labelsTable.selectRow)
+        def selectLabelsTableRow():
+            # Find row where index is frame_index
+            items = self.labelsTable.model().items
+            item_to_find = list(filter(lambda item: item["_original_item"].frame_idx == self.state["frame_idx"], items))
+            if len(item_to_find) > 0:
+                self.labelsTable.selectRowItem(item_to_find[0]["_original_item"])
+
+        self.state.connect("frame_idx", selectLabelsTableRow)
 
         ####### Instances #######
         instances_layout = _make_dock(
@@ -1348,12 +1344,12 @@ class MainWindow(QMainWindow):
             ]
         ):
             self._update_seekbar_marks()
-            self.labelsTable.model().items = self.labels.labeled_frames
 
         if _has_topic(
             [UpdateTopic.frame, UpdateTopic.project_instances, UpdateTopic.tracks]
         ):
             self._update_track_menu()
+            self.labelsTable.model().items = self.labels.get(self.state["video"])
 
         if _has_topic([UpdateTopic.video]):
             self.videosTable.model().items = self.labels.videos
