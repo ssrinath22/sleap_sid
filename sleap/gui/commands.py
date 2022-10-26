@@ -37,7 +37,7 @@ import subprocess
 from enum import Enum
 from glob import glob
 from pathlib import PurePath, Path
-from typing import Callable, Dict, Iterator, List, Optional, Type, Tuple
+from typing import Callable, Dict, Iterator, List, Optional, Type, Tuple, cast
 
 import numpy as np
 
@@ -2503,30 +2503,40 @@ class ShowLabels(EditCommand):
     def do_action(cls, context: CommandContext, params: Dict):
         if params["target"] == "all videos":
             sorting_func = lambda lf: (lf.video.backend.filename, lf.frame_idx)
-            items: List[LabeledFrame] = context.labels.labeled_frames
+            items: Optional[List[LabeledFrame]] = context.labels.labeled_frames
         else:
             sorting_func = lambda lf: lf.frame_idx
-            items: Optional[List[LabeledFrame]] = context.labels.get(
-                context.state["video"], use_cache=True
-            )
+            items = context.labels.get(context.state["video"], use_cache=True)
             items = [] if items is None else items
+        items = cast(List, items)
 
         # Sort LabeledFrames
         if len(items) > 1:
             items.sort(key=sorting_func)
 
         # Update items in table
-        # XXX(LM): Should we be updating the items here or in on_data_update
+        # TODO(LM): We should be updating the items in on_data_update
         context.app.labelsTable.model().items = items
 
 
 class RemoveLabeledFrame(EditCommand):
-    # BUG(LM): Does not remove the labeled frame
+    """Remove a labeled frame which was selected from the Labels table."""
+
+    topics = [UpdateTopic.frame, UpdateTopic.on_frame, UpdateTopic.project_instances]
+
     @classmethod
     def do_action(cls, context: CommandContext, params: dict):
         selected_frame = context.app.labelsTable.getSelectedRowItem()
+        items = context.app.labelsTable.model().original_items
+
         if selected_frame is not None:
+            # Remove from labels
             context.labels.remove(selected_frame)
+
+            # Update labels table items
+            # TODO(LM): We should be updating the items in on_data_update
+            items.pop(items.index(selected_frame))
+            context.app.labelsTable.model().items = items
 
 
 class MergeProject(EditCommand):

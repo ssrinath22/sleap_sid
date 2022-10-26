@@ -1138,7 +1138,7 @@ class MainWindow(QMainWindow):
         _add_button(
             hb,
             "Remove",
-            self.process_events_then(self.commands.removeSuggestion),
+            self.process_events_then(self.commands.removeLabeledFrame),
             "remove labeled frame",
         )
 
@@ -1323,6 +1323,10 @@ class MainWindow(QMainWindow):
         )
 
     def on_data_update(self, what: List[UpdateTopic]):
+
+        # TODO(LM): Need to update labels table when...
+        # number labeled instances change, video is removed, instance score is updated
+
         def _has_topic(topic_list):
             if UpdateTopic.all in what:
                 return True
