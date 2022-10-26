@@ -1113,14 +1113,13 @@ class MainWindow(QMainWindow):
         self.state.connect("suggestion_idx", self.suggestionsTable.selectRow)
 
         ####### Labels #######
-        labels_layout = _make_dock(
-            "Labels", tab_with=videos_layout.parent().parent()
-        )
+        labels_layout = _make_dock("Labels", tab_with=videos_layout.parent().parent())
         self.labelsTable = GenericTableView(
             state=self.state,
             is_sortable=True,
             model=LabelsTableModel(
-                items=self.labels.labeled_frames, context=self.commands
+                items=[],
+                context=self.commands,
             ),
         )
 
@@ -1134,7 +1133,7 @@ class MainWindow(QMainWindow):
             self.process_events_then(self.commands.previousLabeledFrame),
             "goto previous labeled frame",
         )
-    
+
         # TODO(LM): Add command to go to remove Labeled Frame in table
         _add_button(
             hb,
@@ -1154,7 +1153,6 @@ class MainWindow(QMainWindow):
         hbw.setLayout(hb)
         labels_layout.addWidget(hbw)
 
-        # TODO(LM): Add command to show labels.
         self.labels_form_widget = YamlFormWidget.from_name(
             "labels",
             title="Show Labels",
@@ -1175,7 +1173,15 @@ class MainWindow(QMainWindow):
         def selectLabelsTableRow():
             # Find row where index is frame_index
             items = self.labelsTable.model().items
-            item_to_find = list(filter(lambda item: item["_original_item"].frame_idx == self.state["frame_idx"], items))
+            # TODO(LM): Should be using LabelsDataCache here not looping through all
+            # items which could be the same size as all labeled_frames in project
+            item_to_find = list(
+                filter(
+                    lambda item: item["_original_item"].video == self.state["video"]
+                    and item["_original_item"].frame_idx == self.state["frame_idx"],
+                    items,
+                )
+            )
             if len(item_to_find) > 0:
                 self.labelsTable.selectRowItem(item_to_find[0]["_original_item"])
 
@@ -1349,7 +1355,6 @@ class MainWindow(QMainWindow):
             [UpdateTopic.frame, UpdateTopic.project_instances, UpdateTopic.tracks]
         ):
             self._update_track_menu()
-            self.labelsTable.model().items = self.labels.get(self.state["video"])
 
         if _has_topic([UpdateTopic.video]):
             self.videosTable.model().items = self.labels.videos

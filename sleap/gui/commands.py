@@ -556,11 +556,11 @@ class CommandContext:
     def generateSuggestions(self, params: Dict):
         """Generates suggestions using given params dictionary."""
         self.execute(GenerateSuggestions, **params)
-    
+
     def showLabels(self, params: Dict):
         """Show labels using given params dictionary."""
         self.execute(ShowLabels, **params)
-    
+
     def removeLabeledFrame(self):
         """Remove the selected frame from labeled frames."""
         self.execute(RemoveLabeledFrame)
@@ -2496,13 +2496,28 @@ class ClearSuggestions(EditCommand):
 
 
 class ShowLabels(EditCommand):
-    # BUG(LM): GUI does not update until scroll/resize 
-    def do_action(context: CommandContext, params: Dict):
+    """Update which labels are displayed in the Labels table."""
+
+    # BUG(LM): GUI does not update until scroll/resize if items are empty
+    @classmethod
+    def do_action(cls, context: CommandContext, params: Dict):
         if params["target"] == "all videos":
-            context.app.labelsTable.model().items = context.labels.labeled_frames
+            sorting_func = lambda lf: (lf.video.backend.filename, lf.frame_idx)
+            items: List[LabeledFrame] = context.labels.labeled_frames
         else:
-            items = context.labels.get(context.state["video"])
-            context.app.labelsTable.model().items = [] if items is None else items
+            sorting_func = lambda lf: lf.frame_idx
+            items: Optional[List[LabeledFrame]] = context.labels.get(
+                context.state["video"], use_cache=True
+            )
+            items = [] if items is None else items
+
+        # Sort LabeledFrames
+        if len(items) > 1:
+            items.sort(key=sorting_func)
+
+        # Update items in table
+        # XXX(LM): Should we be updating the items here or in on_data_update
+        context.app.labelsTable.model().items = items
 
 
 class RemoveLabeledFrame(EditCommand):
@@ -2511,9 +2526,7 @@ class RemoveLabeledFrame(EditCommand):
     def do_action(cls, context: CommandContext, params: dict):
         selected_frame = context.app.labelsTable.getSelectedRowItem()
         if selected_frame is not None:
-            context.labels.remove(
-                selected_frame
-            )
+            context.labels.remove(selected_frame)
 
 
 class MergeProject(EditCommand):
