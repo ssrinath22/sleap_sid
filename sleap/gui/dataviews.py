@@ -462,31 +462,28 @@ class SuggestionsTableModel(GenericTableModel):
 
         item_dict["SuggestionFrame"] = item
 
-        video_string = (
+        item_dict["group"] = str(item.group + 1) if item.group is not None else ""
+        item_dict["group_int"] = item.group if item.group is not None else -1
+        item_dict["video"] = (
             f"{labels.videos.index(item.video)+1}: "
             f"{os.path.basename(item.video.filename)}"
         )
-
-        item_dict["group"] = str(item.group + 1) if item.group is not None else ""
-        item_dict["group_int"] = item.group if item.group is not None else -1
-        item_dict["video"] = video_string
         item_dict["frame"] = int(item.frame_idx) + 1  # start at frame 1 rather than 0
 
         # show how many labeled instances are in this frame
         lf = labels.get((item.video, item.frame_idx), use_cache=True)
-        val = 0 if lf is None else len(lf.user_instances)
-        val = str(val) if val > 0 else ""
-        item_dict["labeled"] = val
+        if lf is not None:
+            num_labeled = len(lf.user_instances)
+            item_dict["labeled"] = str(num_labeled) if num_labeled > 0 else ""
 
-        # calculate score for frame
-        scores = [
-            inst.score
-            for lf in labels.find(item.video, item.frame_idx)
-            for inst in lf
-            if hasattr(inst, "score")
-        ]
-        val = sum(scores) / len(scores) if scores else ""
-        item_dict["mean score"] = val
+            # calculate score for frame
+            scores = [inst.score for inst in lf if hasattr(inst, "score")]
+            item_dict["mean score"] = (
+                sum(scores) / len(scores) if len(scores) > 0 else ""
+            )
+        else:
+            item_dict["labeled"] = ""
+            item_dict["mean score"] = ""
 
         return item_dict
 
@@ -547,29 +544,25 @@ class LabelsTableModel(GenericTableModel):
 
         item_dict["LabeledFrame"] = item
 
-        video_string = (
+        item_dict["video"] = (
             f"{labels.videos.index(item.video)+1}: "
             f"{os.path.basename(item.video.filename)}"
         )
-
-        item_dict["video"] = video_string
         item_dict["frame"] = int(item.frame_idx) + 1  # start at frame 1 rather than 0
 
         # show how many labeled instances are in this frame
         lf = labels.get((item.video, item.frame_idx), use_cache=True)
-        val = 0 if lf is None else len(lf.user_instances)
-        val = str(val) if val > 0 else ""
-        item_dict["labeled"] = val
+        if lf is None:
+            raise KeyError(
+                f"Could not find labeled frame at frame index {item.frame_idx} for "
+                "video {item.video}"
+            )
+        val = len(lf.user_instances)
+        item_dict["labeled"] = str(val) if val > 0 else ""
 
         # calculate score for frame
-        scores = [
-            inst.score
-            for lf in labels.find(item.video, item.frame_idx)
-            for inst in lf
-            if hasattr(inst, "score")
-        ]
-        val = sum(scores) / len(scores) if scores else ""
-        item_dict["mean score"] = val
+        scores = [inst.score for inst in lf if hasattr(inst, "score")]
+        item_dict["mean score"] = sum(scores) / len(scores) if len(scores) > 0 else ""
 
         return item_dict
 
