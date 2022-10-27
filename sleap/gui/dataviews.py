@@ -75,6 +75,7 @@ class GenericTableModel(QtCore.QAbstractTableModel):
         self.properties = properties or self.properties or []
         self.context = context
 
+        self.original_items = items
         self.items = items
 
     def object_to_items(self, item_list):
@@ -90,31 +91,35 @@ class GenericTableModel(QtCore.QAbstractTableModel):
     def items(self, obj):
         if not obj:
             self._data = []
+            self.original_items = []
             return
 
         self.obj = obj
         item_list = self.object_to_items(obj)
 
         self.beginResetModel()
+        self.original_items = item_list
         if hasattr(self, "item_to_data"):
             self._data = []
-            for item in item_list:
-                item_data = self.item_to_data(obj, item)
-                item_data["_original_item"] = item
-                self._data.append(item_data)
+            # TODO(LM): Replace following with list comprehension
+            self._data = [self.item_to_data(obj, item) for item in item_list]
+            # for item in item_list:
+            #     item_data = self.item_to_data(obj, item)
+            #     item_data["_original_item"] = item
+            #     self._data.append(item_data)
         else:
             self._data = item_list
         self.endResetModel()
 
-    @property
-    def original_items(self):
-        """
-        Gets the original items (rather than the dictionary we build from it).
-        """
-        try:
-            return [datum["_original_item"] for datum in self._data]
-        except:
-            return self._data
+    # @property
+    # def original_items(self):
+    #     """
+    #     Gets the original items (rather than the dictionary we build from it).
+    #     """
+    #     try:
+    #         return [datum["_original_item"] for datum in self._data]
+    #     except:
+    #         return self._data
 
     def get_item_color(self, item: Any, key: str):
         """Virtual method, returns color for given item."""

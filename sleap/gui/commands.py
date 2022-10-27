@@ -557,9 +557,9 @@ class CommandContext:
         """Generates suggestions using given params dictionary."""
         self.execute(GenerateSuggestions, **params)
 
-    def showLabels(self, params: Dict):
+    def getLabeledFramesToShow(self, params: Dict):
         """Show labels using given params dictionary."""
-        self.execute(ShowLabels, **params)
+        self.execute(GetLabeledFramesToShow, **params)
 
     def removeLabeledFrame(self):
         """Remove the selected frame from labeled frames."""
@@ -1686,7 +1686,7 @@ class ReplaceVideo(EditCommand):
 
 
 class RemoveVideo(EditCommand):
-    topics = [UpdateTopic.video]
+    topics = [UpdateTopic.video, UpdateTopic.labels]
 
     @staticmethod
     def do_action(context: CommandContext, params: dict):
@@ -2495,7 +2495,7 @@ class ClearSuggestions(EditCommand):
         context.labels.clear_suggestions()
 
 
-class ShowLabels(EditCommand):
+class GetLabeledFramesToShow(EditCommand):
     """Update which labels are displayed in the Labels table."""
 
     # BUG(LM): GUI does not update until scroll/resize if items are empty
@@ -2515,14 +2515,18 @@ class ShowLabels(EditCommand):
             items.sort(key=sorting_func)
 
         # Update items in table
-        # TODO(LM): We should be updating the items in on_data_update
         context.app.labelsTable.model().items = items
 
 
 class RemoveLabeledFrame(EditCommand):
     """Remove a labeled frame which was selected from the Labels table."""
 
-    topics = [UpdateTopic.frame, UpdateTopic.on_frame, UpdateTopic.project_instances]
+    topics = [
+        UpdateTopic.labels,
+        UpdateTopic.frame,
+        UpdateTopic.on_frame,
+        UpdateTopic.project_instances,
+    ]
 
     @classmethod
     def do_action(cls, context: CommandContext, params: dict):
@@ -2530,13 +2534,8 @@ class RemoveLabeledFrame(EditCommand):
         items = context.app.labelsTable.model().original_items
 
         if selected_frame is not None:
-            # Remove from labels
+            # Remove from labels (and original_items list in LabelsTableModel)
             context.labels.remove(selected_frame)
-
-            # Update labels table items
-            # TODO(LM): We should be updating the items in on_data_update
-            items.pop(items.index(selected_frame))
-            context.app.labelsTable.model().items = items
 
 
 class MergeProject(EditCommand):

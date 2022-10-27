@@ -1158,7 +1158,7 @@ class MainWindow(QMainWindow):
             title="Show Labels",
         )
         self.labels_form_widget.mainAction.connect(
-            self.process_events_then(self.commands.showLabels)
+            self.process_events_then(self.commands.getLabeledFramesToShow)
         )
         labels_layout.addWidget(self.labels_form_widget)
 
@@ -1172,18 +1172,18 @@ class MainWindow(QMainWindow):
 
         def selectLabelsTableRow():
             # Find row where index is frame_index
-            items = self.labelsTable.model().items
+            items = self.labelsTable.model().original_items
             # TODO(LM): Should be using LabelsDataCache here not looping through all
             # items which could be the same size as all labeled_frames in project
             item_to_find = list(
                 filter(
-                    lambda item: item["_original_item"].video == self.state["video"]
-                    and item["_original_item"].frame_idx == self.state["frame_idx"],
+                    lambda item: item.video == self.state["video"]
+                    and item.frame_idx == self.state["frame_idx"],
                     items,
                 )
             )
             if len(item_to_find) > 0:
-                self.labelsTable.selectRowItem(item_to_find[0]["_original_item"])
+                self.labelsTable.selectRowItem(item_to_find[0])
 
         self.state.connect("frame_idx", selectLabelsTableRow)
 
@@ -1335,12 +1335,16 @@ class MainWindow(QMainWindow):
                     return True
             return False
 
+        if _has_topic([UpdateTopic.labels]):
+            self.labelsTable.model().items = self.labelsTable.model().original_items
+
         if _has_topic(
             [
                 UpdateTopic.frame,
                 UpdateTopic.skeleton,
                 UpdateTopic.project_instances,
                 UpdateTopic.tracks,
+                UpdateTopic.labels,
             ]
         ):
             self.plotFrame()
@@ -1351,12 +1355,18 @@ class MainWindow(QMainWindow):
                 UpdateTopic.project_instances,
                 UpdateTopic.tracks,
                 UpdateTopic.suggestions,
+                UpdateTopic.labels,
             ]
         ):
             self._update_seekbar_marks()
 
         if _has_topic(
-            [UpdateTopic.frame, UpdateTopic.project_instances, UpdateTopic.tracks]
+            [
+                UpdateTopic.frame,
+                UpdateTopic.project_instances,
+                UpdateTopic.tracks,
+                UpdateTopic.labels,
+            ]
         ):
             self._update_track_menu()
 
@@ -1374,13 +1384,15 @@ class MainWindow(QMainWindow):
                     "node", self.labels.skeletons[0].node_names
                 )
 
-        if _has_topic([UpdateTopic.project, UpdateTopic.on_frame]):
+        if _has_topic([UpdateTopic.project, UpdateTopic.on_frame, UpdateTopic.labels]):
             self.instancesTable.model().items = self.state["labeled_frame"]
 
         if _has_topic([UpdateTopic.suggestions]):
             self.suggestionsTable.model().items = self.labels.suggestions
 
-        if _has_topic([UpdateTopic.project_instances, UpdateTopic.suggestions]):
+        if _has_topic(
+            [UpdateTopic.project_instances, UpdateTopic.suggestions, UpdateTopic.labels]
+        ):
             # update count of suggested frames w/ labeled instances
             suggestion_status_text = ""
             suggestion_list = self.labels.get_suggestions()
