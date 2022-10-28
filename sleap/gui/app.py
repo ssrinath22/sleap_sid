@@ -1134,7 +1134,6 @@ class MainWindow(QMainWindow):
             "goto previous labeled frame",
         )
 
-        # TODO(LM): Add command to go to remove Labeled Frame in table
         _add_button(
             hb,
             "Remove",
@@ -1323,10 +1322,6 @@ class MainWindow(QMainWindow):
         )
 
     def on_data_update(self, what: List[UpdateTopic]):
-
-        # TODO(LM): Need to update labels table when...
-        # number labeled instances change, video is removed, instance score is updated
-
         def _has_topic(topic_list):
             if UpdateTopic.all in what:
                 return True
@@ -1335,6 +1330,7 @@ class MainWindow(QMainWindow):
                     return True
             return False
 
+        # TODO(LM): Need to update labels table when instance score updated (inference)
         if _has_topic([UpdateTopic.labels]):
             self.labelsTable.model().items = self.labelsTable.model().original_items
 
@@ -1344,7 +1340,6 @@ class MainWindow(QMainWindow):
                 UpdateTopic.skeleton,
                 UpdateTopic.project_instances,
                 UpdateTopic.tracks,
-                UpdateTopic.labels,
             ]
         ):
             self.plotFrame()
@@ -1355,7 +1350,6 @@ class MainWindow(QMainWindow):
                 UpdateTopic.project_instances,
                 UpdateTopic.tracks,
                 UpdateTopic.suggestions,
-                UpdateTopic.labels,
             ]
         ):
             self._update_seekbar_marks()
@@ -1365,7 +1359,6 @@ class MainWindow(QMainWindow):
                 UpdateTopic.frame,
                 UpdateTopic.project_instances,
                 UpdateTopic.tracks,
-                UpdateTopic.labels,
             ]
         ):
             self._update_track_menu()
@@ -1384,15 +1377,13 @@ class MainWindow(QMainWindow):
                     "node", self.labels.skeletons[0].node_names
                 )
 
-        if _has_topic([UpdateTopic.project, UpdateTopic.on_frame, UpdateTopic.labels]):
+        if _has_topic([UpdateTopic.project, UpdateTopic.on_frame]):
             self.instancesTable.model().items = self.state["labeled_frame"]
 
         if _has_topic([UpdateTopic.suggestions]):
             self.suggestionsTable.model().items = self.labels.suggestions
 
-        if _has_topic(
-            [UpdateTopic.project_instances, UpdateTopic.suggestions, UpdateTopic.labels]
-        ):
+        if _has_topic([UpdateTopic.project_instances, UpdateTopic.suggestions]):
             # update count of suggested frames w/ labeled instances
             suggestion_status_text = ""
             suggestion_list = self.labels.get_suggestions()

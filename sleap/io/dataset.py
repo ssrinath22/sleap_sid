@@ -699,7 +699,7 @@ class Labels(MutableSequence):
         ],
         use_cache: bool = False,
         raise_errors: bool = False,
-    ) -> Union[LabeledFrame, List[LabeledFrame]]:
+    ) -> Optional[Union[LabeledFrame, List[LabeledFrame]]]:
         """Return labeled frames matching key or return `None` if not found.
 
         This is a safe version of `labels[...]` that will not raise an exception if the

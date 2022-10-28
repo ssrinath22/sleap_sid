@@ -37,7 +37,7 @@ import subprocess
 from enum import Enum
 from glob import glob
 from pathlib import PurePath, Path
-from typing import Callable, Dict, Iterator, List, Optional, Type, Tuple, cast
+from typing import Callable, Dict, Iterator, List, Optional, Type, Tuple, Union, cast
 
 import numpy as np
 
@@ -2503,7 +2503,9 @@ class GetLabeledFramesToShow(EditCommand):
     def do_action(cls, context: CommandContext, params: Dict):
         if params["target"] == "all videos":
             sorting_func = lambda lf: (lf.video.backend.filename, lf.frame_idx)
-            items: Optional[List[LabeledFrame]] = context.labels.labeled_frames
+            items: Optional[
+                Union[LabeledFrame, List[LabeledFrame]]
+            ] = context.labels.labeled_frames
         else:
             sorting_func = lambda lf: lf.frame_idx
             items = context.labels.get(context.state["video"], use_cache=True)
@@ -2531,7 +2533,6 @@ class RemoveLabeledFrame(EditCommand):
     @classmethod
     def do_action(cls, context: CommandContext, params: dict):
         selected_frame = context.app.labelsTable.getSelectedRowItem()
-        items = context.app.labelsTable.model().original_items
 
         if selected_frame is not None:
             # Remove from labels (and original_items list in LabelsTableModel)
@@ -2574,7 +2575,12 @@ class MergeProject(EditCommand):
 
 
 class AddInstance(EditCommand):
-    topics = [UpdateTopic.frame, UpdateTopic.project_instances, UpdateTopic.suggestions]
+    topics = [
+        UpdateTopic.frame,
+        UpdateTopic.project_instances,
+        UpdateTopic.suggestions,
+        UpdateTopic.labels,
+    ]
 
     @staticmethod
     def get_previous_frame_index(context: CommandContext) -> Optional[int]:
@@ -2870,7 +2876,7 @@ class AddMissingInstanceNodes(EditCommand):
 
 
 class AddUserInstancesFromPredictions(EditCommand):
-    topics = [UpdateTopic.frame, UpdateTopic.project_instances]
+    topics = [UpdateTopic.frame, UpdateTopic.project_instances, UpdateTopic.labels]
 
     @staticmethod
     def make_instance_from_predicted_instance(
