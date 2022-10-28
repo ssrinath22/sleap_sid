@@ -1171,18 +1171,14 @@ class MainWindow(QMainWindow):
 
         def selectLabelsTableRow():
             # Find row where index is frame_index
-            items = self.labelsTable.model().original_items
-            # TODO(LM): Should be using LabelsDataCache here not looping through all
-            # items which could be the same size as all labeled_frames in project
-            item_to_find = list(
-                filter(
-                    lambda item: item.video == self.state["video"]
-                    and item.frame_idx == self.state["frame_idx"],
-                    items,
-                )
+            item_to_find = self.labels.get(
+                self.state["video"], self.state["frame_idx"], use_cache=True
             )
-            if len(item_to_find) > 0:
-                self.labelsTable.selectRowItem(item_to_find[0])
+            try:
+                self.labelsTable.selectRowItem(item_to_find)
+            except:
+                # Item is not displayed in labels table
+                pass
 
         self.state.connect("frame_idx", selectLabelsTableRow)
 
