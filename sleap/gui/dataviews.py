@@ -99,7 +99,9 @@ class GenericTableModel(QtCore.QAbstractTableModel):
 
         self.beginResetModel()
         self.original_items = item_list
-        if hasattr(self, "item_to_data"):
+        if hasattr(self, "items_data"):
+            self._data = self.items_data
+        elif hasattr(self, "item_to_data"):
             self._data = [self.item_to_data(obj, item) for item in item_list]
         else:
             self._data = item_list
@@ -526,44 +528,37 @@ class SuggestionsTableModel(GenericTableModel):
 
 class LabelsTableModel(GenericTableModel):
     properties = ("video", "frame", "labeled", "mean score")
+    _video = "current video"
 
-    def item_to_data(self, obj, item):
-        labels = self.context.labels
-        item_dict = dict()
+    @property
+    def video(self):
+        return self._video
 
-        item_dict["LabeledFrame"] = item
-
-        item_dict["video"] = (
-            f"{labels.videos.index(item.video)+1}: "
-            f"{os.path.basename(item.video.filename)}"
-        )
-        item_dict["frame"] = int(item.frame_idx) + 1  # start at frame 1 rather than 0
-
-        # show how many labeled instances are in this frame
-        lf = labels.get((item.video, item.frame_idx), use_cache=True)
-        if lf is None:
-            raise KeyError(
-                f"Could not find labeled frame at frame index {item.frame_idx} for "
-                "video {item.video}"
+    @video.setter
+    def video(self, value):
+        self._video = value
+        if value == "all videos":
+            self.items = self.context.labels.labeled_frames
+        else:
+            self.items = self.context.labels.get(
+                self.context.state["video"], use_cache=True
             )
-        val = len(lf.user_instances)
-        item_dict["labeled"] = str(val) if val > 0 else ""
 
-        # calculate score for frame
-        scores = [inst.score for inst in lf if hasattr(inst, "score")]
-        item_dict["mean score"] = sum(scores) / len(scores) if len(scores) > 0 else ""
-
-        return item_dict
+    @property
+    def items_data(self):
+        data_dict = self.context.labels._cache._lf_for_tables
+        if self.video == "all videos":
+            data_list = []
+            for video in data_dict.keys():
+                data_list.extend(data_dict[video])
+            return data_list
+        else:
+            return data_dict[self.context.state["video"]]
 
     def sort(self, column_idx: int, order: QtCore.Qt.SortOrder):
         """Sorts table by given column and order."""
 
         super(LabelsTableModel, self).sort(column_idx, order)
-
-        # # Update order in project (so order can be saved and affects what we
-        # # consider previous/next suggestion for navigation).
-        # resorted_labeled_frames = [item["LabeledFrame"] for item in self._data]
-        # self.context.labels.set_suggestions(resorted_suggestions)
 
 
 class SkeletonNodeModel(QtCore.QStringListModel):

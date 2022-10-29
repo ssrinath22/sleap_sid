@@ -108,15 +108,17 @@ class LabelsDataCache:
 
             # Initialize dictionaries
             self._lf_by_video = dict()
+            self._lf_for_tables = dict()
             self._frame_idx_map = dict()
             self._track_occupancy = dict()
             self._frame_count_cache = dict()
             for video in self.labels.videos:
                 self._lf_by_video[video] = []
-                self._frame_idx_map[video] = []
+                self._lf_for_tables[video] = []
 
             for lf in self.labels:
                 self._lf_by_video[lf.video].append(lf)
+                self._lf_for_tables[lf.video].append(self._make_lf_dict(lf))
 
             for video in self.labels.videos:
                 self._frame_idx_map[video] = {
@@ -128,10 +130,18 @@ class LabelsDataCache:
 
             if new_vid not in self._lf_by_video:
                 self._lf_by_video[new_vid] = []
+            if new_vid not in self._lf_for_tables:
+                self._lf_for_tables[new_vid] = []
             if new_vid not in self._frame_idx_map:
                 self._frame_idx_map[new_vid] = dict()
             self._lf_by_video[new_vid].append(new_frame)
+            self._lf_for_tables[new_vid].append(self._make_lf_dict(new_frame))
             self._frame_idx_map[new_vid][new_frame.frame_idx] = new_frame
+
+        # Sort the labeled frames to display in GUI table
+        # TODO(LM): Sorted frames are displayed, but rows pointing to items are not
+        for video in self.labels.videos:
+            self._lf_for_tables[video].sort(key=lambda lf_dict: lf_dict["frame"])
 
     def find_frames(
         self, video: Video, frame_idx: Optional[Union[int, Iterable[int]]] = None
@@ -181,6 +191,25 @@ class LabelsDataCache:
 
         return frame_idxs
 
+    def _make_lf_dict(
+        self, lf: LabeledFrame
+    ) -> Dict[str, Union[LabeledFrame, Video, int, str, str]]:
+        """Create dictionary item to display labeled frame in GUI table."""
+
+        n_instances = len(lf.user_instances)
+        scores = [inst.score for inst in lf.predicted_instances]
+        lf_dict = {
+            "original_item": lf,
+            "video": (
+                f"{self.labels.videos.index(lf.video)+1}: "
+                f"{os.path.basename(lf.video.backend.filename)}"
+            ),
+            "frame": int(lf.frame_idx) + 1,
+            "labeled": str(n_instances) if n_instances > 0 else "",
+            "mean score": sum(scores) / len(scores) if len(scores) > 0 else "",
+        }
+        return lf_dict
+
     def _make_track_occupancy(self, video: Video) -> Dict[Video, RangeList]:
         """Build cached track occupancy data."""
         frame_idx_map = self._frame_idx_map[video]
@@ -224,6 +253,8 @@ class LabelsDataCache:
         """Remove video and update cache as needed."""
         if video in self._lf_by_video:
             del self._lf_by_video[video]
+        if video in self._lf_for_tables:
+            del self._lf_for_tables[video]
         if video in self._frame_idx_map:
             del self._frame_idx_map[video]
 

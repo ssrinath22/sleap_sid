@@ -2501,28 +2501,14 @@ class GetLabeledFramesToShow(EditCommand):
     # BUG(LM): GUI does not update until scroll/resize if items are empty
     @classmethod
     def do_action(cls, context: CommandContext, params: Dict):
-        if params["target"] == "all videos":
-            sorting_func = lambda lf: (lf.video.backend.filename, lf.frame_idx)
-            items: Optional[
-                Union[LabeledFrame, List[LabeledFrame]]
-            ] = context.labels.labeled_frames
-        else:
-            sorting_func = lambda lf: lf.frame_idx
-            items = context.labels.get(context.state["video"], use_cache=True)
-            items = [] if items is None else items
-        items = cast(List, items)
-
-        # Sort LabeledFrames
-        if len(items) > 1:
-            items.sort(key=sorting_func)
-
-        # Update items in table
-        context.app.labelsTable.model().items = items
+        context.app.labelsTable.model().video = params["target"]
 
 
 class RemoveLabeledFrame(EditCommand):
     """Remove a labeled frame which was selected from the Labels table."""
 
+    # TODO(LM): Removing frame does not update display in table (but updates what row
+    # is being selected)
     topics = [
         UpdateTopic.labels,
         UpdateTopic.frame,

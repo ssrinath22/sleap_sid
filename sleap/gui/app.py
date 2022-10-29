@@ -1161,6 +1161,7 @@ class MainWindow(QMainWindow):
         )
         labels_layout.addWidget(self.labels_form_widget)
 
+        # TODO(LM): Does not go to correct (sorted) item
         def goto_labeled_frame(*args):
             selected_frame = self.labelsTable.getSelectedRowItem()
             self.commands.gotoVideoAndFrame(
@@ -1328,7 +1329,7 @@ class MainWindow(QMainWindow):
 
         # TODO(LM): Need to update labels table when instance score updated (inference)
         if _has_topic([UpdateTopic.labels]):
-            self.labelsTable.model().items = self.labelsTable.model().original_items
+            self.labelsTable.model().video = self.labelsTable.model().video
 
         if _has_topic(
             [
