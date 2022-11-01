@@ -2523,6 +2523,7 @@ class RemoveLabeledFrame(EditCommand):
         if selected_frame is not None:
             # Remove from labels (and original_items list in LabelsTableModel)
             context.labels.remove(selected_frame)
+            context.app.labelsTable.original_items.remove(selected_frame)
 
 
 class MergeProject(EditCommand):

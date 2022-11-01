@@ -138,11 +138,6 @@ class LabelsDataCache:
             self._lf_for_tables[new_vid].append(self._make_lf_dict(new_frame))
             self._frame_idx_map[new_vid][new_frame.frame_idx] = new_frame
 
-        # Sort the labeled frames to display in GUI table
-        # TODO(LM): Sorted frames are displayed, but rows pointing to items are not
-        for video in self.labels.videos:
-            self._lf_for_tables[video].sort(key=lambda lf_dict: lf_dict["frame"])
-
     def find_frames(
         self, video: Video, frame_idx: Optional[Union[int, Iterable[int]]] = None
     ) -> Optional[List[LabeledFrame]]:
@@ -191,9 +186,7 @@ class LabelsDataCache:
 
         return frame_idxs
 
-    def _make_lf_dict(
-        self, lf: LabeledFrame
-    ) -> Dict[str, Union[LabeledFrame, Video, int, str, str]]:
+    def _make_lf_dict(self, lf: LabeledFrame) -> Dict[str, object]:
         """Create dictionary item to display labeled frame in GUI table."""
 
         n_instances = len(lf.user_instances)
@@ -242,6 +235,8 @@ class LabelsDataCache:
 
     def remove_frame(self, frame: LabeledFrame):
         """Remove frame and update cache as needed."""
+        # TODO(LM): Good way to access "original_item" = frame from list of dictionaries?
+        # self._lf_for_tables[frame.video].remove(frame)
         self._lf_by_video[frame.video].remove(frame)
         # We'll assume that there's only a single LabeledFrame for this video and
         # frame_idx, and remove the frame_idx from the cache.

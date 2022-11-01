@@ -1161,7 +1161,6 @@ class MainWindow(QMainWindow):
         )
         labels_layout.addWidget(self.labels_form_widget)
 
-        # TODO(LM): Does not go to correct (sorted) item
         def goto_labeled_frame(*args):
             selected_frame = self.labelsTable.getSelectedRowItem()
             self.commands.gotoVideoAndFrame(
@@ -1842,41 +1841,44 @@ class MainWindow(QMainWindow):
         ShortcutDialog().exec_()
 
 
-def main():
+def main(args: list = None):
     """Starts new instance of app."""
 
     import argparse
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "labels_path", help="Path to labels file", type=str, default=None, nargs="?"
-    )
-    parser.add_argument(
-        "--nonnative",
-        help="Don't use native file dialogs",
-        action="store_const",
-        const=True,
-        default=False,
-    )
-    parser.add_argument(
-        "--profiling",
-        help="Enable performance profiling",
-        action="store_const",
-        const=True,
-        default=False,
-    )
-    parser.add_argument(
-        "--reset",
-        help=(
-            "Reset GUI state and preferences. Use this flag if the GUI appears "
-            "incorrectly or fails to open."
-        ),
-        action="store_const",
-        const=True,
-        default=False,
-    )
+    def make_argparser():
+        parser = argparse.ArgumentParser()
+        parser.add_argument(
+            "labels_path", help="Path to labels file", type=str, default=None, nargs="?"
+        )
+        parser.add_argument(
+            "--nonnative",
+            help="Don't use native file dialogs",
+            action="store_const",
+            const=True,
+            default=False,
+        )
+        parser.add_argument(
+            "--profiling",
+            help="Enable performance profiling",
+            action="store_const",
+            const=True,
+            default=False,
+        )
+        parser.add_argument(
+            "--reset",
+            help=(
+                "Reset GUI state and preferences. Use this flag if the GUI appears "
+                "incorrectly or fails to open."
+            ),
+            action="store_const",
+            const=True,
+            default=False,
+        )
+        return parser
 
-    args = parser.parse_args()
+    parser = make_argparser()
+    args = parser.parse_args(args)
 
     if args.nonnative:
         os.environ["USE_NON_NATIVE_FILE"] = "1"
@@ -1913,4 +1915,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    ds = "D:\\Users\\Liezl\\ProjectsData\\sleap-estimates-animal-poses\\datasets\\remora-whale\\remora.v01 copy.slp"
+    main([ds])

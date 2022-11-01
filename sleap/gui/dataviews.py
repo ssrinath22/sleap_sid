@@ -75,7 +75,6 @@ class GenericTableModel(QtCore.QAbstractTableModel):
         self.properties = properties or self.properties or []
         self.context = context
 
-        self.original_items = items
         self.items = items
 
     def object_to_items(self, item_list):
@@ -96,9 +95,9 @@ class GenericTableModel(QtCore.QAbstractTableModel):
 
         self.obj = obj
         item_list = self.object_to_items(obj)
+        self.original_items = item_list
 
         self.beginResetModel()
-        self.original_items = item_list
         if hasattr(self, "items_data"):
             self._data = self.items_data
         elif hasattr(self, "item_to_data"):
@@ -106,6 +105,15 @@ class GenericTableModel(QtCore.QAbstractTableModel):
         else:
             self._data = item_list
         self.endResetModel()
+
+    # TODO(LM): Set original items when items are set and when items are sorted.
+    # @property
+    # def original_items(self):
+    #     """Returns list of original items before transformation to dictionary."""
+    #     try:
+    #         return [datum["original_item"] for datum in self._data]
+    #     except:
+    #         return self._data
 
     def get_item_color(self, item: Any, key: str):
         """Virtual method, returns color for given item."""
@@ -131,7 +139,7 @@ class GenericTableModel(QtCore.QAbstractTableModel):
                 return getattr(item, key)
 
         elif role == QtCore.Qt.ForegroundRole:
-            return self.get_item_color(self.original_items[idx], key)
+            return self.get_item_color(self.items[idx]["original_item"], key)
 
         return None
 
@@ -205,6 +213,7 @@ class GenericTableModel(QtCore.QAbstractTableModel):
                 return sort_val
 
         self.beginResetModel()
+        # TODO(LM): zip and then sort both _data and original_items
         self._data.sort(key=string_safe_sort, reverse=reverse)
         self.endResetModel()
 
@@ -212,7 +221,7 @@ class GenericTableModel(QtCore.QAbstractTableModel):
         """Gets item from QModelIndex."""
         if not index.isValid():
             return None, None
-        item = self.original_items[index.row()]
+        item = self.items[index.row()]["original_item"]
         key = self.properties[index.column()]
         return item, key
 
@@ -321,7 +330,7 @@ class GenericTableView(QtWidgets.QTableView):
 
     def selectRow(self, idx: int):
         """Select row corresponding to index."""
-        self.selectRowItem(self.model().original_items[idx])
+        self.selectRowItem(self.model().items[idx]["original_item"])
 
     def getSelectedRowItem(self) -> Any:
         """Return item corresponding to currently selected row.
@@ -333,7 +342,7 @@ class GenericTableView(QtWidgets.QTableView):
         idx = self.currentIndex()
         if not idx.isValid():
             return None
-        return self.model().original_items[idx.row()]
+        return self.model().items[idx.row()]["original_item"]
 
 
 class VideosTableModel(GenericTableModel):
@@ -451,7 +460,7 @@ class SuggestionsTableModel(GenericTableModel):
         labels = self.context.labels
         item_dict = dict()
 
-        item_dict["SuggestionFrame"] = item
+        item_dict["original_item"] = item
 
         item_dict["group"] = str(item.group + 1) if item.group is not None else ""
         item_dict["group_int"] = item.group if item.group is not None else -1
@@ -522,7 +531,9 @@ class SuggestionsTableModel(GenericTableModel):
 
         # Update order in project (so order can be saved and affects what we
         # consider previous/next suggestion for navigation).
-        resorted_suggestions = [item["SuggestionFrame"] for item in self._data]
+        resorted_suggestions = (
+            self.original_items
+        )  # TODO(LM): Test [item["original_item"] for item in self._data]
         self.context.labels.set_suggestions(resorted_suggestions)
 
 
@@ -537,22 +548,34 @@ class LabelsTableModel(GenericTableModel):
     @video.setter
     def video(self, value):
         self._video = value
+        labels = self.context.labels
+
+        # TODO(LM): Sorting of items dict and original items is decoupled - Couple it
         if value == "all videos":
-            self.items = self.context.labels.labeled_frames
+            labeled_frames = labels.labeled_frames
+            sorting_func = lambda lf: (labels.videos.index(lf.video), lf.frame_idx)
         else:
-            self.items = self.context.labels.get(
-                self.context.state["video"], use_cache=True
-            )
+            labeled_frames = labels.get(self.context.state["video"], use_cache=True)
+            sorting_func = lambda lf: lf.frame_idx
+        labeled_frames.sort(key=sorting_func)
+
+        # Calls items.setter in GenericTableModel which also sets items_data
+        self.items = labeled_frames
 
     @property
     def items_data(self):
         data_dict = self.context.labels._cache._lf_for_tables
+        sort_by_frame = lambda lf_dict: lf_dict["frame"]
+
+        # TODO(LM): Sorting of items dict and original items is decoupled - Couple it
         if self.video == "all videos":
             data_list = []
             for video in data_dict.keys():
+                data_dict[video].sort(key=sort_by_frame)
                 data_list.extend(data_dict[video])
             return data_list
         else:
+            data_dict[self.context.state["video"]].sort(key=sort_by_frame)
             return data_dict[self.context.state["video"]]
 
     def sort(self, column_idx: int, order: QtCore.Qt.SortOrder):

@@ -238,7 +238,7 @@ def test_app_workflow(
     for l_suggestion, st_suggestion in list(
         zip(app.labels.get_suggestions(), app.suggestionsTable.model().items)
     ):
-        assert l_suggestion == st_suggestion["SuggestionFrame"]
+        assert l_suggestion == st_suggestion["original_item"]
         lf = app.labels.get(
             (l_suggestion.video, l_suggestion.frame_idx), use_cache=True
         )
