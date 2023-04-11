@@ -177,9 +177,7 @@ class VideosDock(DockWidget):
             state=main_window.state,
             row_name="video",
             is_activatable=True,
-            model=VideosTableModel(
-                items=main_window.labels.videos, context=main_window.commands
-            ),
+            model=self.model,
             ellipsis_left=True,
         )
 
@@ -572,3 +570,200 @@ class InstancesDock(DockWidget):
         hbw = QWidget()
         hbw.setLayout(hb)
         return hbw
+
+
+class Sessions(DockWidget):
+    """Dock widget for displaying skeleton information."""
+
+    def __init__(
+        self,
+        main_window: Optional[QMainWindow] = None,
+        tab_with: Optional[QLayout] = None,
+    ):
+        self.videos_model_type = VideosTableModel
+        self.edges_model_type = SkeletonEdgesTableModel
+        super().__init__(
+            name="Sessions",
+            main_window=main_window,
+            model_type=[self.videos_model_type, self.edges_model_type],
+            tab_with=tab_with,
+        )
+
+    def create_models(self) -> GenericTableModel:
+        main_window = self.main_window
+        self.nodes_model = self.nodes_model_type(
+            items=main_window.state["skeleton"], context=main_window.commands
+        )
+        self.edges_model = self.edges_model_type(
+            items=main_window.state["skeleton"], context=main_window.commands
+        )
+        return [self.nodes_model, self.edges_model]
+
+    def create_tables(self) -> GenericTableView:
+        if self.model is None:
+            self.create_models()
+
+        main_window = self.main_window
+        self.nodes_table = GenericTableView(
+            state=main_window.state,
+            row_name="node",
+            model=self.nodes_model,
+        )
+
+        self.edges_table = GenericTableView(
+            state=main_window.state,
+            row_name="edge",
+            model=self.edges_model,
+        )
+
+        return [self.nodes_table, self.edges_table]
+
+    def create_project_skeleton_groupbox(self) -> QGroupBox:
+        """Create the groupbox for the project skeleton."""
+        main_window = self.main_window
+        gb = QGroupBox("Current Session")
+        vgb = QVBoxLayout()
+
+        nodes_widget = QWidget()
+        vb = QVBoxLayout()
+        graph_tabs = QTabWidget()
+
+        vb.addWidget(self.nodes_table)
+        hb = QHBoxLayout()
+        self.add_button(hb, "Add Video", main_window.commands.addVideoToSession)
+        self.add_button(hb, "Remove Video", main_window.commands.removeVideoFromSession)
+
+        hbw = QWidget()
+        hbw.setLayout(hb)
+        vb.addWidget(hbw)
+        nodes_widget.setLayout(vb)
+        graph_tabs.addTab(nodes_widget, "Nodes")
+
+        def _update_edge_src():
+            self.skeletonEdgesDst.model().skeleton = main_window.state["skeleton"]
+
+        edges_widget = QWidget()
+
+        vb = QVBoxLayout()
+        vb.addWidget(self.edges_table)
+
+        hb = QHBoxLayout()
+        self.skeletonEdgesSrc = QComboBox()
+        self.skeletonEdgesSrc.setEditable(False)
+        self.skeletonEdgesSrc.currentIndexChanged.connect(_update_edge_src)
+        self.skeletonEdgesSrc.setModel(SkeletonNodeModel(main_window.state["skeleton"]))
+        hb.addWidget(self.skeletonEdgesSrc)
+        hb.addWidget(QLabel("to"))
+        self.skeletonEdgesDst = QComboBox()
+        self.skeletonEdgesDst.setEditable(False)
+        hb.addWidget(self.skeletonEdgesDst)
+        self.skeletonEdgesDst.setModel(
+            SkeletonNodeModel(
+                main_window.state["skeleton"],
+                lambda: self.skeletonEdgesSrc.currentText(),
+            )
+        )
+
+        def new_edge():
+            src_node = self.skeletonEdgesSrc.currentText()
+            dst_node = self.skeletonEdgesDst.currentText()
+            main_window.commands.newEdge(src_node, dst_node)
+
+        self.add_button(hb, "Add Edge", new_edge)
+        self.add_button(hb, "Delete Edge", main_window.commands.deleteEdge)
+        hbw = QWidget()
+        hbw.setLayout(hb)
+        vb.addWidget(hbw)
+        edges_widget.setLayout(vb)
+        graph_tabs.addTab(edges_widget, "Edges")
+        vgb.addWidget(graph_tabs)
+
+        hb = QHBoxLayout()
+        self.add_button(hb, "Load From File...", main_window.commands.openSkeleton)
+        self.add_button(hb, "Save As...", main_window.commands.saveSkeleton)
+
+        hbw = QWidget()
+        hbw.setLayout(hb)
+        vgb.addWidget(hbw)
+
+        # Add graph tabs to "Project Skeleton" group box
+        gb.setLayout(vgb)
+        return gb
+
+    def create_templates_groupbox(self) -> QGroupBox:
+        """Create the groupbox for the skeleton templates."""
+        main_window = self.main_window
+
+        gb = CollapsibleWidget("Templates")
+        vb = QVBoxLayout()
+        hb = QHBoxLayout()
+
+        skeletons_folder = get_package_file("sleap/skeletons")
+        skeletons_json_files = find_files_by_suffix(
+            skeletons_folder, suffix=".json", depth=1
+        )
+        skeletons_names = [json.name.split(".")[0] for json in skeletons_json_files]
+        self.skeleton_templates = QComboBox()
+        self.skeleton_templates.addItems(skeletons_names)
+        self.skeleton_templates.setEditable(False)
+        hb.addWidget(self.skeleton_templates)
+        self.add_button(hb, "Load", main_window.commands.openSkeletonTemplate)
+        hbw = QWidget()
+        hbw.setLayout(hb)
+        vb.addWidget(hbw)
+
+        hb = QHBoxLayout()
+        self.skeleton_preview_image = QLabel("Preview Skeleton")
+        hb.addWidget(self.skeleton_preview_image)
+        hb.setAlignment(self.skeleton_preview_image, Qt.AlignLeft)
+
+        self.skeleton_description = QLabel(
+            f'<strong>Description:</strong> {main_window.state["skeleton_description"]}'
+        )
+        self.skeleton_description.setWordWrap(True)
+        hb.addWidget(self.skeleton_description)
+        hb.setAlignment(self.skeleton_description, Qt.AlignLeft)
+
+        hbw = QWidget()
+        hbw.setLayout(hb)
+        vb.addWidget(hbw)
+
+        def updatePreviewImage(preview_image_bytes: bytes):
+
+            # Decode the preview image
+            preview_image = decode_preview_image(preview_image_bytes)
+
+            # Create a QImage from the Image
+            preview_image = QtGui.QImage(
+                preview_image.tobytes(),
+                preview_image.size[0],
+                preview_image.size[1],
+                QtGui.QImage.Format_RGBA8888,  # Format for RGBA images (see Image.mode)
+            )
+
+            preview_image = QtGui.QPixmap.fromImage(preview_image)
+
+            self.skeleton_preview_image.setPixmap(preview_image)
+
+        def update_skeleton_preview(idx: int):
+            skel = Skeleton.load_json(skeletons_json_files[idx])
+            main_window.state["skeleton_description"] = (
+                f"<strong>Description:</strong> {skel.description}<br><br>"
+                f"<strong>Nodes ({len(skel)}):</strong> {', '.join(skel.node_names)}"
+            )
+            self.skeleton_description.setText(main_window.state["skeleton_description"])
+            updatePreviewImage(skel.preview_image)
+
+        self.skeleton_templates.currentIndexChanged.connect(update_skeleton_preview)
+        update_skeleton_preview(idx=0)
+
+        gb.set_content_layout(vb)
+        return gb
+
+    def lay_everything_out(self):
+        """Lay out the dock widget, adding/creating other widgets if needed."""
+        templates_gb = self.create_templates_groupbox()
+        self.wgt_layout.addWidget(templates_gb)
+
+        project_skeleton_groupbox = self.create_project_skeleton_groupbox()
+        self.wgt_layout.addWidget(project_skeleton_groupbox)

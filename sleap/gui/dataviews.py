@@ -25,7 +25,8 @@ from operator import itemgetter
 from typing import Any, Callable, Dict, List, Optional, Type
 
 from sleap.gui.state import GuiState
-from sleap.gui.commands import CommandContext
+
+# from sleap.gui.commands import CommandContext
 from sleap.gui.color import ColorManager
 from sleap.io.dataset import Labels
 from sleap.instance import LabeledFrame, Instance
@@ -69,7 +70,7 @@ class GenericTableModel(QtCore.QAbstractTableModel):
         self,
         items: Optional[list] = None,
         properties: Optional[List[str]] = None,
-        context: Optional[CommandContext] = None,
+        context: Optional["CommandContext"] = None,
     ):
         super(GenericTableModel, self).__init__()
         self.properties = properties or self.properties or []
@@ -300,6 +301,7 @@ class GenericTableView(QtWidgets.QTableView):
         name_prefix: Optional[str] = None,
         is_sortable: bool = False,
         is_activatable: bool = False,
+        is_multiselect: bool = False,
         ellipsis_left: bool = False,
     ):
         super(GenericTableView, self).__init__()
@@ -309,6 +311,7 @@ class GenericTableView(QtWidgets.QTableView):
         self.name_prefix = name_prefix if name_prefix is not None else self.name_prefix
         self.is_sortable = is_sortable or self.is_sortable
         self.is_activatable = is_activatable or self.is_activatable
+        self.is_multiselect = is_multiselect
 
         self.setModel(model)
 
@@ -320,7 +323,12 @@ class GenericTableView(QtWidgets.QTableView):
         self.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
         self.setSortingEnabled(self.is_sortable)
 
-        self.doubleClicked.connect(self.activateSelected)
+        if self.is_multiselect:
+            # FIXME(LM): The ExtendedSelection mode allows multi-selection, but makes
+            # it difficult to select a row by clicking on it (requires multiple clicks).
+            self.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+        else:
+            self.doubleClicked.connect(self.activateSelected)
         if self.row_name:
             self.state.connect(self.name_prefix + self.row_name, self.selectRowItem)
 
@@ -373,6 +381,17 @@ class GenericTableView(QtWidgets.QTableView):
         if not idx.isValid():
             return None
         return self.model().original_items[idx.row()]
+
+    # Return the selected rows as a list of items
+    def getSelectedRowItems(self) -> List[Any]:
+        """Return items corresponding to currently selected rows.
+
+        Note that if the table model converts items to dictionaries (using
+        `item_to_data` method), then returned items will be the original items,
+        not the converted dicts.
+        """
+        idxs = self.selectionModel().selectedRows()
+        return [self.model().original_items[idx.row()] for idx in idxs]
 
 
 class VideosTableModel(GenericTableModel):

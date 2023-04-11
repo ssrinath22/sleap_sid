@@ -42,7 +42,8 @@ import numpy as np
 import cv2
 import attr
 from qtpy import QtCore, QtWidgets, QtGui
-from qtpy.QtWidgets import QMessageBox, QProgressDialog
+from qtpy.QtWidgets import QDialog, QVBoxLayout, QDialogButtonBox
+from sleap.gui.dialogs.selectvideos import SelectVideosDialog
 from sleap.io.cameras import RecordingSession
 
 from sleap.util import get_package_file
@@ -59,7 +60,6 @@ from sleap.gui.dialogs.filedialog import FileDialog
 from sleap.gui.dialogs.missingfiles import MissingFilesDialog
 from sleap.gui.dialogs.merge import MergeDialog, ReplaceSkeletonTableDialog
 from sleap.gui.dialogs.message import MessageDialog
-from sleap.gui.dialogs.query import QueryDialog
 from sleap.gui.suggestions import VideoFrameSuggestions
 from sleap.gui.state import GuiState
 
@@ -173,6 +173,7 @@ class FakeApp:
     """Use if you want to execute commands independently of the GUI app."""
 
     labels: Labels
+    state: GuiState = attr.ib(default=attr.Factory(GuiState))
 
 
 @attr.s(auto_attribs=True, eq=False)
@@ -2238,6 +2239,51 @@ class DeleteEdge(EditCommand):
         edge = params["edge"]
         # Delete edge
         context.state["skeleton"].delete_edge(**edge)
+
+
+class AddVideoToSession(EditCommand):
+    # topics = [UpdateTopic.session]
+
+    @staticmethod
+    def do_action(context: CommandContext, params: dict):
+        session = context.state["session"]
+
+        # Pop-up a dialog to select the videos
+        unused_videos = list(
+            set(context.labels.videos)
+            - (set(session.videos) ^ set(session.unlinked_videos))
+        )
+        # model = VideosTableModel(items=unused_videos, context=context)
+        # table = GenericTableView(
+        #     state=context.app.state,
+        #     row_name="video",
+        #     is_activatable=True,
+        #     model=model,
+        #     ellipsis_left=True,
+        # )
+
+        # # Pop up a widget to select the videos
+        # dialog = QDialog(context.app)
+        # dialog.setWindowTitle("Add videos to session")
+        # dialog.setLayout(QVBoxLayout())
+        # dialog.layout().addWidget(table)
+        # dialog.layout().addWidget(QDialogButtonBox(QDialogButtonBox.Ok, dialog))
+        # dialog.exec_()
+        svd = SelectVideosDialog(context=context, videos=unused_videos)
+        selected_videos = svd.table.selected_items
+
+        # Add the videos to the session
+        session.unlinked_videos.extend(selected_videos)
+
+
+class RemoveVideoFromSession(EditCommand):
+    # topics = [UpdateTopic.session]
+
+    @staticmethod
+    def do_action(context: CommandContext, params: dict):
+        video = context.state["selected session video"]
+        if video in context.state["session"].unlinked_videos:
+            context.state["session"].unlinked_videos.remove(video)
 
 
 class InstanceDeleteCommand(EditCommand):

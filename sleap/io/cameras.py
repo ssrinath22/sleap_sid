@@ -341,6 +341,8 @@ class RecordingSession:
         metadata: Dictionary of metadata.
         videos: List of `Video`s that have been linked to a `Camcorder` in the
             `self.camera_cluster`.
+        unlinked_videos: List of `Video`s that have not been linked to a `Camcorder` in
+            the `self.camera_cluster`.
         linked_cameras: List of `Camcorder`s in the `self.camera_cluster` that are
             linked to a `Video`.
         unlinked_cameras: List of `Camcorder`s in the `self.camera_cluster` that are
@@ -349,6 +351,7 @@ class RecordingSession:
 
     camera_cluster: CameraCluster = field(factory=CameraCluster)
     metadata: dict = field(factory=dict)
+    unlinked_videos: List[Video] = field(factory=list)
     _video_by_camcorder: Dict[Camcorder, Video] = field(factory=dict)
 
     @property

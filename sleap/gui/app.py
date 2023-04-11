@@ -1658,3 +1658,10 @@ def main(args: Optional[list] = None):
         app.exec_()
 
     pass
+
+
+if __name__ == "__main__":
+    import os
+
+    ds = os.environ["ds-dmc"]
+    main([ds])
