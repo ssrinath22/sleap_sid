@@ -513,6 +513,15 @@ class SuggestionsDock(DockWidget):
             "clear suggestions",
         )
 
+        self.add_button(
+            hb,
+            "Clear unused",
+            main_window.process_events_then(
+                main_window.commands.clearUnusedSuggestions
+            ),
+            "clear unused suggestions",
+        )
+
         hbw = QWidget()
         hbw.setLayout(hb)
         return hbw

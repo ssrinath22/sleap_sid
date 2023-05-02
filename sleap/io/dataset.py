@@ -1503,9 +1503,17 @@ class Labels(MutableSequence):
         """Delete suggestions for specified video."""
         self.suggestions = [item for item in self.suggestions if item.video != video]
 
-    def clear_suggestions(self):
-        """Delete all suggestions."""
-        self.suggestions = []
+    def clear_suggestions(self, clear_all: bool = False):
+        """Delete all or unused suggestions."""
+        if clear_all:
+            self.suggestions = []
+        else:
+            labeled_suggestions = []
+            for sugg in self.suggestions:
+                lf = self.get(sugg.video, sugg.frame_idx)
+                if lf is not None and lf.has_user_instances:
+                    labeled_suggestions.append(sugg)
+            self.set_suggestions(labeled_suggestions)
 
     @property
     def unlabeled_suggestions(self) -> List[SuggestionFrame]:

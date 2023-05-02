@@ -388,7 +388,11 @@ class CommandContext:
 
     def clearSuggestions(self):
         """Clear all suggestions."""
-        self.execute(ClearSuggestions)
+        self.execute(ClearSuggestions, clear_all=True)
+
+    def clearUnusedSuggestions(self):
+        """Clear all suggestions that are not used."""
+        self.execute(ClearSuggestions, clear_all=False)
 
     def nextTrackFrame(self):
         """Goes to next frame on which a track starts."""
@@ -2728,15 +2732,27 @@ class ClearSuggestions(EditCommand):
 
     @staticmethod
     def ask(context: CommandContext, params: dict) -> bool:
+        clear_all = params.get("clear_all", False)
+
         if len(context.labels.suggestions) == 0:
             return False
 
-        # Warn that suggestions will be cleared
+        if clear_all:
+            title = "Clear all suggestions"
+            message = (
+                "Are you sure you want to remove all suggestions from the project?"
+            )
+        else:
+            title = "Clearing unused suggestions"
+            message = (
+                "Are you sure you want to remove unused suggestions from the project?"
+            )
 
+        # Warn that suggestions will be cleared
         response = QtWidgets.QMessageBox.warning(
             context.app,
-            "Clearing all suggestions",
-            "Are you sure you want to remove all suggestions from the project?",
+            title,
+            message,
             QtWidgets.QMessageBox.Yes,
             QtWidgets.QMessageBox.No,
         )
@@ -2747,7 +2763,8 @@ class ClearSuggestions(EditCommand):
 
     @classmethod
     def do_action(cls, context: CommandContext, params: dict):
-        context.labels.clear_suggestions()
+        clear_all = params.get("clear_all", False)
+        context.labels.clear_suggestions(clear_all=clear_all)
 
 
 class MergeProject(EditCommand):
