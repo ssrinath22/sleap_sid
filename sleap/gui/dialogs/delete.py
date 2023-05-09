@@ -69,6 +69,8 @@ class DeleteDialog(QtWidgets.QDialog):
         ]
         if len(self.context.labels.videos) > 1:
             frame_options.append("all videos")
+        if len(self.context.labels.suggestions) > 1:
+            frame_options.append("unsuggested frames")
         if self.context.state["has_frame_range"]:
             frame_options.extend(
                 ["selected clip", "current video except for selected clip"]
@@ -169,6 +171,15 @@ class DeleteDialog(QtWidgets.QDialog):
             )
         elif frames_value == "all videos":
             lf_list = labels.labeled_frames
+        elif frames_value == "unsuggested frames":
+            # TODO(LM): Speed this up ten-fold by being smarter about calling labels.get
+            suggestions_set = set(
+                [
+                    labels.get((sugg.video, sugg.frame_idx))
+                    for sugg in labels.suggestions
+                ]
+            )
+            lf_list = [lf for lf in labels.labeled_frames if lf not in suggestions_set]
         elif frames_value == "selected clip":
             clip_range = range(*self.context.state["frame_range"])
             print(clip_range)
