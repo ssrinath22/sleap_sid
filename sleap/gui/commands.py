@@ -2566,10 +2566,19 @@ class SetSelectedInstanceTrack(EditCommand):
             old_track = selected_instance.track
 
             # Determine range that should be affected
+            use_full_range = True
+
             if context.state["has_frame_range"]:
-                # If range is selected in seekbar, use that
-                frame_range = tuple(context.state["frame_range"])
-            else:
+                # Determine if selected instance is within frame range in [min, max)
+                min_frame, max_frame = context.state["frame_range"]
+                if (
+                    selected_instance.frame_idx < max_frame
+                    and selected_instance.frame_idx >= min_frame
+                ):
+                    frame_range = tuple(context.state["frame_range"])
+                    use_full_range = False
+
+            if use_full_range:
                 # Otherwise, range is current to last frame
                 frame_range = (
                     context.state["frame_idx"],
