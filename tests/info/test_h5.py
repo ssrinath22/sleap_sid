@@ -4,6 +4,8 @@ import h5py
 import json
 import numpy as np
 
+import pytest
+
 from pathlib import PurePath, Path
 from typing import List
 
@@ -353,3 +355,17 @@ def test_hdf5_video_arg(
     # No files should exist for labels with no videos
     assert Path(output_paths[0]).exists() == False
     assert Path(output_paths[1]).exists() == False
+
+
+@pytest.mark.parametrize("invisible_as_nan", [True, False])
+def test_invisible_as_nan(invisible_as_nan: bool, min_labels_slp: Labels):
+    labels = min_labels_slp
+    instance = labels[0].instances[0]
+    point = instance.points[0]
+    point.visible = False
+
+    inst_numpy = instance.numpy(invisible_as_nan=True)
+    assert np.all(np.isnan(inst_numpy[0]))
+
+    inst_numpy = instance.numpy(invisible_as_nan=False)
+    assert not np.any(np.isnan(inst_numpy[0]))

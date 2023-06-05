@@ -1,4 +1,8 @@
-from sleap.io.convert import default_analysis_filename, main as sleap_convert
+from sleap.io.convert import (
+    create_parser,
+    default_analysis_filename,
+    main as sleap_convert,
+)
 from sleap.io.dataset import Labels
 from sleap.io.video import Video
 from sleap.instance import Instance
@@ -126,3 +130,16 @@ def test_auto_slp_h5_json_format(
     output_path = Path(f"{new_slp_path}{suffix}")
     print(f"output_path = {output_path}")
     sleap_convert_assert(output_path, new_slp_path)
+
+
+@pytest.mark.parametrize("invisible_as_xy", [True, False])
+def test_valid_sleap_convert_cli(invisible_as_xy):
+    args = "--format slp --output test.slp test.slp".split()
+    args += ["--invisible_as_xy"] if invisible_as_xy else []
+    parser = create_parser()
+    args = parser.parse_args(args)
+
+    assert args.format == "slp"
+    assert args.outputs == ["test.slp"]
+    assert args.input_path == "test.slp"
+    assert args.invisible_as_xy == invisible_as_xy
