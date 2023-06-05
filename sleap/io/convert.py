@@ -76,6 +76,13 @@ def create_parser():
     parser.add_argument(
         "--video", default="", help="Path to video (if needed for conversion)."
     )
+    parser.add_argument(
+        "--invisible_as_xy",
+        action="store_true",
+        help="Override default behavior of converting invisible points to NaNs. "
+        "Returns invisible points as (x,y) coordinates instead. "
+        "Only applicable when format is 'analysis'.",
+    )
     return parser
 
 
@@ -168,6 +175,7 @@ def main(args: list = None):
                     labels_path=args.input_path,
                     all_frames=True,
                     video=video,
+                    invisible_as_nan=not args.invisible_as_xy,
                 )
 
     elif len(args.outputs) > 0:
