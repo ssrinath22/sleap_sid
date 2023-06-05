@@ -56,7 +56,7 @@ def get_edges_as_np_strings(labels: Labels) -> List[Tuple[np.string_, np.string_
 
 
 def get_occupancy_and_points_matrices(
-    labels: Labels, all_frames: bool, video: Video = None
+    labels: Labels, all_frames: bool, video: Video = None, invisible_as_nan: bool = True
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Builds numpy matrices with track occupancy and point location data.
 
@@ -72,6 +72,9 @@ def get_occupancy_and_points_matrices(
         video: The :py:class:`Video` from which to get data. If no `video` is specified,
             then the first video in `source_object` videos list will be used. If there
             are no labeled frames in the `video`, then None will be returned.
+        invisible_as_nan: If True, then instance points that are marked as invisible
+            will be written as NaNs in the output file. Otherwise, they will be written
+            as x,y coordinates.
 
     Returns:
         tuple of arrays:
@@ -175,7 +178,7 @@ def get_occupancy_and_points_matrices(
 
         occupancy_matrix[track_i, frame_i] = 1
 
-        locations_matrix[frame_i, ..., track_i] = inst.numpy()
+        locations_matrix[frame_i, ..., track_i] = inst.numpy(invisible_as_nan)
         if type(inst) == PredictedInstance:
             point_scores[frame_i, ..., track_i] = inst.scores
             instance_scores[frame_i, ..., track_i] = inst.score
@@ -292,6 +295,7 @@ def main(
     labels_path: str = None,
     all_frames: bool = True,
     video: Video = None,
+    invisible_as_nan: bool = True,
 ):
     """Writes HDF5 file with matrices of track occupancy and coordinates.
 
@@ -306,6 +310,9 @@ def main(
         video: The :py:class:`Video` from which to get data. If no `video` is specified,
             then the first video in `source_object` videos list will be used. If there
             are no labeled frames in the `video`, then no output file will be written.
+        invisible_as_nan: If True, then instance points that are marked as invisible
+            will be written as NaNs in the output file. Otherwise, they will be written
+            as x,y coordinates.
 
     Returns:
         None
@@ -327,7 +334,9 @@ def main(
             point_scores,
             instance_scores,
             tracking_scores,
-        ) = get_occupancy_and_points_matrices(labels, all_frames, video)
+        ) = get_occupancy_and_points_matrices(
+            labels, all_frames, video, invisible_as_nan
+        )
     except TypeError:
         print(
             f"No labeled frames in {video.filename}. "
