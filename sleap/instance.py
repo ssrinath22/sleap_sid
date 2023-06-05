@@ -830,17 +830,21 @@ class Instance:
         """
         return self.get_points_array(invisible_as_nan=True)
 
-    def numpy(self) -> np.ndarray:
+    def numpy(self, invisible_as_nan: bool = True) -> np.ndarray:
         """Return the instance node coordinates as a numpy array.
 
-        Alias for `points_array`.
+        Similar to `points_array`, but with option to return invisible nodes as Nan's.
+
+        Args:
+            invisible_as_nan: If True, return invisible nodes as NaN's. If False, return
+                the coordinates of the invisible nodes.
 
         Returns:
             Array of shape `(n_nodes, 2)` of dtype `float32` containing the coordinates
             of the instance's nodes. Missing/not visible nodes will be replaced with
             `NaN`.
         """
-        return self.points_array
+        return self.get_points_array(invisible_as_nan=invisible_as_nan)
 
     def transform_points(self, transformation_matrix):
         """Apply affine transformation matrix to points in the instance.
