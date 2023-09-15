@@ -43,7 +43,6 @@ jobs:
         # https://github.com/conda-incubator/setup-miniconda
         uses: conda-incubator/setup-miniconda@v2.0.1
         with:
-          python-version: 3.7
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
           environment-file: environment_build.yml
           condarc-file: ${{ matrix.condarc }}
