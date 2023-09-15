@@ -20,20 +20,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-22.04", "windows-2022", "macos-latest"]
+        os: ["ubuntu-22.04"] #, "windows-2022", "macos-latest"]
         # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstrategymatrixinclude
         include:
           # Use this condarc as default
           - condarc: .conda/condarc.yaml
           - condadir: .conda
           - platform: linux
-          # Use special condarc if macos
-          - os: "macos-latest"
-            condarc: .conda_mac/condarc.yaml
-            condadir: .conda_mac
-            platform: osx
-          - os: "windows-2022"
-            platform: win
+          # # Use special condarc if macos
+          # - os: "macos-latest"
+          #   condarc: .conda_mac/condarc.yaml
+          #   condadir: .conda_mac
+          #   platform: osx
+          # - os: "windows-2022"
+          #   platform: win
     steps:
       # Setup
       - uses: actions/checkout@v2
@@ -66,119 +66,119 @@ jobs:
         run: |
           python setup.py bdist_wheel
 
-      # # Upload pip wheel (Ubuntu)
-      # - name: Upload pip wheel (Ubuntu)
-      #   if: matrix.os == 'ubuntu-22.04'
-      #   env:
-      #     PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
-      #   shell: bash -l {0}
-      #   run: |
-      #     twine upload -u __token__ -p "$PYPI_TOKEN" dist/* --non-interactive --skip-existing --disable-progress-bar
-
-      # Build conda package
-      - name: Build conda package
-        shell: bash -l {0}
-        run: |
-          conda build ${{ matrix.condadir }} --output-folder build
-      
-      # Upload artifact "upload" can use it
-      - name: Upload wheel artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: sleap-conda-package-${{ matrix.os }}
-          path: build/${{ matrix.platform }}-64/*.tar.bz2
-          retention-days: 1
-      
-  upload:
-    name: Upload packages ${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    needs: build  # Wait for build job to complete
-    strategy:
-      fail-fast: false
-      matrix:
-        os: ["ubuntu-22.04", "windows-2022", "macos-latest"]
-        # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstrategymatrixinclude
-        include:
-          # Use this condarc as default
-          - condarc: .conda/condarc.yaml
-          - platform: linux
-          # Use special condarc if macos
-          - os: "macos-latest"
-            condarc: .conda_mac/condarc.yaml
-            platform: osx
-          - os: "windows-2022"
-            platform: win
-    steps:
-      # Download wheel
-      - name: Download wheel artifact
-        uses: actions/download-artifact@v3
-        id: download
-        with:
-          name: sleap-conda-package-${{ matrix.os }}
-          path: build/${{ matrix.platform }}-64
-
-      # Setup
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
-      - name: Cache conda
-        uses: actions/cache@v1
+      # Upload pip wheel (Ubuntu)
+      - name: Upload pip wheel (Ubuntu)
+        if: matrix.os == 'ubuntu-22.04'
         env:
-          # Increase this value to reset cache if environment_build.yml has not changed
-          CACHE_NUMBER: 0
-        with:
-          path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment_build.yml', 'pyproject.toml') }}
-
-      - name: Setup Miniconda for Build
-        # https://github.com/conda-incubator/setup-miniconda
-        uses: conda-incubator/setup-miniconda@v2.0.1
-        with:
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          environment-file: environment_build.yml
-          condarc-file: ${{ matrix.condarc }}
-          activate-environment: sleap_ci
-
-      - name: Print build environment info
+          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
         shell: bash -l {0}
         run: |
-          which python
-          conda list
-          pip freeze
+          twine upload -u __token__ -p "$PYPI_TOKEN" dist/* --non-interactive --skip-existing --disable-progress-bar
+
+  #     # Build conda package
+  #     - name: Build conda package
+  #       shell: bash -l {0}
+  #       run: |
+  #         conda build ${{ matrix.condadir }} --output-folder build
+      
+  #     # Upload artifact "upload" can use it
+  #     - name: Upload wheel artifact
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: sleap-conda-package-${{ matrix.os }}
+  #         path: build/${{ matrix.platform }}-64/*.tar.bz2
+  #         retention-days: 1
+      
+  # upload:
+  #   name: Upload packages ${{ matrix.os }})
+  #   runs-on: ${{ matrix.os }}
+  #   needs: build  # Wait for build job to complete
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       os: ["ubuntu-22.04", "windows-2022", "macos-latest"]
+  #       # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstrategymatrixinclude
+  #       include:
+  #         # Use this condarc as default
+  #         - condarc: .conda/condarc.yaml
+  #         - platform: linux
+  #         # Use special condarc if macos
+  #         - os: "macos-latest"
+  #           condarc: .conda_mac/condarc.yaml
+  #           platform: osx
+  #         - os: "windows-2022"
+  #           platform: win
+  #   steps:
+  #     # Download wheel
+  #     - name: Download wheel artifact
+  #       uses: actions/download-artifact@v3
+  #       id: download
+  #       with:
+  #         name: sleap-conda-package-${{ matrix.os }}
+  #         path: build/${{ matrix.platform }}-64
+
+  #     # Setup
+  #     - name: Checkout repo
+  #       uses: actions/checkout@v3
+
+  #     - name: Cache conda
+  #       uses: actions/cache@v1
+  #       env:
+  #         # Increase this value to reset cache if environment_build.yml has not changed
+  #         CACHE_NUMBER: 0
+  #       with:
+  #         path: ~/conda_pkgs_dir
+  #         key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment_build.yml', 'pyproject.toml') }}
+
+  #     - name: Setup Miniconda for Build
+  #       # https://github.com/conda-incubator/setup-miniconda
+  #       uses: conda-incubator/setup-miniconda@v2.0.1
+  #       with:
+  #         use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+  #         environment-file: environment_build.yml
+  #         condarc-file: ${{ matrix.condarc }}
+  #         activate-environment: sleap_ci
+
+  #     - name: Print build environment info
+  #       shell: bash -l {0}
+  #       run: |
+  #         which python
+  #         conda list
+  #         pip freeze
           
-      # Login to conda
-      - name: Login to Anaconda
-        env:
-          ANACONDA_LOGIN: ${{ secrets.ANACONDA_LOGIN }}
-        shell: bash -l {0}
-        run: |
-          yes 2>/dev/null | anaconda login --username sleap --password "$ANACONDA_LOGIN" || true
+  #     # Login to conda
+  #     - name: Login to Anaconda
+  #       env:
+  #         ANACONDA_LOGIN: ${{ secrets.ANACONDA_LOGIN }}
+  #       shell: bash -l {0}
+  #       run: |
+  #         yes 2>/dev/null | anaconda login --username sleap --password "$ANACONDA_LOGIN" || true
       
-      # Upload conda package (Linux/Windows)
-      - name: Upload conda package (Linux/Windows dev)
-        if: runner.os != 'macOS'
-        shell: bash -l {0}
-        run: |
-          ls
-          ls build
-          ls build/${{ matrix.platform }}-64
-          package_path=$(find build/${{ matrix.platform }}-64 -name "*.tar.bz2")
-          echo $package_path
-          anaconda -v upload "$package_path" --label dev
+  #     # Upload conda package (Linux/Windows)
+  #     - name: Upload conda package (Linux/Windows dev)
+  #       if: runner.os != 'macOS'
+  #       shell: bash -l {0}
+  #       run: |
+  #         ls
+  #         ls build
+  #         ls build/${{ matrix.platform }}-64
+  #         package_path=$(find build/${{ matrix.platform }}-64 -name "*.tar.bz2")
+  #         echo $package_path
+  #         anaconda -v upload "$package_path" --label dev
       
-      # Upload conda package (Mac)
-      - name: Upload conda package (Mac/dev)
-        if: runner.os == 'macOS'
-        shell: bash -e {0}
-        run: |
-          ls
-          ls build
-          ls build/${{ matrix.platform }}-64
-          package_path=$(find build/${{ matrix.platform }}-64 -name "*.tar.bz2")
-          echo $package_path
-          anaconda -v upload "$package_path" --label dev
+  #     # Upload conda package (Mac)
+  #     - name: Upload conda package (Mac/dev)
+  #       if: runner.os == 'macOS'
+  #       shell: bash -e {0}
+  #       run: |
+  #         ls
+  #         ls build
+  #         ls build/${{ matrix.platform }}-64
+  #         package_path=$(find build/${{ matrix.platform }}-64 -name "*.tar.bz2")
+  #         echo $package_path
+  #         anaconda -v upload "$package_path" --label dev
       
-      - name: Logout from Anaconda
-        shell: bash -l {0}
-        run: |
-          anaconda logout
+  #     - name: Logout from Anaconda
+  #       shell: bash -l {0}
+  #       run: |
+  #         anaconda logout
