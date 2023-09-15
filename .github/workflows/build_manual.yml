@@ -10,6 +10,7 @@ on:
       - '.conda_mac/meta.yaml'
     branches:
       - develop
+      - liezl/retain-conda-packages-in-gh-actions
 
 jobs:
   build:
