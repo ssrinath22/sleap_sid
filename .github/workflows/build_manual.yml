@@ -99,7 +99,7 @@ jobs:
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v3
         with:
-          name: sleap-conda-package
+          name: sleap-conda-package-${{ matrix.os }}
           path: build/${{ matrix.platform }}-64/*.tar.bz2
           retention-days: 1
       
@@ -128,11 +128,39 @@ jobs:
         uses: actions/download-artifact@v3
         id: download
         with:
-          name: sleap-conda-package
+          name: sleap-conda-package-${{ matrix.os }}
           path: build/${{ matrix.platform }}-64
 
-
       # Setup
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Cache conda
+        uses: actions/cache@v1
+        env:
+          # Increase this value to reset cache if environment_build.yml has not changed
+          CACHE_NUMBER: 0
+        with:
+          path: ~/conda_pkgs_dir
+          key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment_build.yml', 'pyproject.toml') }}
+
+      - name: Setup Miniconda for Build
+        # https://github.com/conda-incubator/setup-miniconda
+        uses: conda-incubator/setup-miniconda@v2.0.1
+        with:
+          python-version: 3.7
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          environment-file: environment_build.yml
+          condarc-file: ${{ matrix.condarc }}
+          activate-environment: sleap_ci
+
+      - name: Print build environment info
+        shell: bash -l {0}
+        run: |
+          which python
+          conda list
+          pip freeze
+          
       # Login to conda (Ubuntu)
       - name: Login to Anaconda (Ubuntu)
         if: matrix.os == 'ubuntu-22.04'
