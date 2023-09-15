@@ -25,10 +25,12 @@ jobs:
         include:
           # Use this condarc as default
           - condarc: .conda/condarc.yaml
+          - condadir: .conda
           - platform: linux
           # Use special condarc if macos
           - os: "macos-latest"
             condarc: .conda_mac/condarc.yaml
+            condadir: .conda_mac
             platform: osx
           - os: "windows-2022"
             platform: win
@@ -74,26 +76,11 @@ jobs:
       #   run: |
       #     twine upload -u __token__ -p "$PYPI_TOKEN" dist/* --non-interactive --skip-existing --disable-progress-bar
 
-      # Build conda package (Ubuntu)
-      - name: Build conda package (Ubuntu)
-        if: matrix.os == 'ubuntu-22.04'
+      # Build conda package
+      - name: Build conda package
         shell: bash -l {0}
         run: |
-          conda build .conda --output-folder build
-
-      # Build conda package (Windows)
-      - name: Build conda package (Windows)
-        if: matrix.os == 'windows-2022'
-        shell: powershell
-        run: |
-          conda build .conda --output-folder build
-
-      # Build conda package (Mac)
-      - name: Build conda package (Mac)
-        if: matrix.os == 'macos-latest'
-        shell: bash -l {0}
-        run: |
-          conda build .conda_mac --output-folder build
+          conda build ${{ matrix.condadir }} --output-folder build
       
       # Upload artifact "upload" can use it
       - name: Upload wheel artifact
@@ -161,53 +148,37 @@ jobs:
           conda list
           pip freeze
           
-      # Login to conda (Ubuntu)
-      - name: Login to Anaconda (Ubuntu)
-        if: matrix.os == 'ubuntu-22.04'
+      # Login to conda
+      - name: Login to Anaconda
         env:
           ANACONDA_LOGIN: ${{ secrets.ANACONDA_LOGIN }}
         shell: bash -l {0}
         run: |
           yes 2>/dev/null | anaconda login --username sleap --password "$ANACONDA_LOGIN" || true
       
-      # Login to conda (Windows)
-      - name: Login to Anaconda (Windows)
-        if: matrix.os == 'windows-2022'
-        env:
-          ANACONDA_LOGIN: ${{ secrets.ANACONDA_LOGIN }}
-        shell: powershell
-        run: |
-          echo "yes" | anaconda login --username sleap --password "$env:ANACONDA_LOGIN"
-      
-      # Login to conda (Mac)
-      - name: Login to Anaconda (Mac)
-        if: matrix.os == 'macos-latest'
-        env:
-          ANACONDA_LOGIN: ${{ secrets.ANACONDA_LOGIN }}
+      # Upload conda package (Linux/Windows)
+      - name: Upload conda package (Linux/Windows dev)
+        if: runner.os != 'macOS'
         shell: bash -l {0}
         run: |
-          yes 2>/dev/null | anaconda login --username sleap --password "$ANACONDA_LOGIN" || true
-      
-      # Upload conda package (Windows)
-      - name: Upload conda package (Windows/dev)
-        if: matrix.os == 'windows-2022'
-        shell: powershell
-        run: |
-          anaconda -v upload "build\win-64\*.tar.bz2" --label dev
-      
-      # Upload conda package (Ubuntu)
-      - name: Upload conda package (Ubuntu/dev)
-        if: matrix.os == 'ubuntu-22.04'
-        shell: bash -l {0}
-        run: |
-          anaconda -v upload build/linux-64/*.tar.bz2 --label dev
+          package_path=$(find build\${{ matrix.platform }}-64 -name "*.tar.bz2")
+          echo $package_path
+          ls
+          ls build
+          ls build\${{ matrix.platform }}-64
+          anaconda -v upload "$package_path" --label dev
       
       # Upload conda package (Mac)
       - name: Upload conda package (Mac/dev)
-        if: matrix.os == 'macos-latest'
-        shell: bash -l {0}
+        if: runner.os == 'macOS'
+        shell: bash -e {0}
         run: |
-          anaconda -v upload build/osx-64/*.tar.bz2 --label dev
+          package_path=$(find build\${{ matrix.platform }}-64 -name "*.tar.bz2")
+          echo $package_path
+          ls
+          ls build
+          ls build\${{ matrix.platform }}-64
+          anaconda -v upload "$package_path" --label dev
       
       - name: Logout from Anaconda
         shell: bash -l {0}
