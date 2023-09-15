@@ -56,9 +56,9 @@ jobs:
           which python
           conda info
 
-      # Build pip wheel (Not Windows)
-      - name: Build pip wheel (Not Windows)
-        if: matrix.os != 'windows-2022'
+      # Build pip wheel (Linux)
+      - name: Build pip wheel (Linux)
+        if: matrix.os == 'ubuntu-22.04'
         shell: bash -l {0}
         run: |
           python setup.py bdist_wheel
