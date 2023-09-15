@@ -8,6 +8,7 @@ on:
     paths:
       - '.conda/meta.yaml'
       - '.conda_mac/meta.yaml'
+      - '.github/workflows/build_manual.yml'
     branches:
       - develop
       - liezl/retain-conda-packages-in-gh-actions
@@ -105,6 +106,7 @@ jobs:
   upload:
     name: Upload packages ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    needs: build  # Wait for build job to complete
     strategy:
       fail-fast: false
       matrix:
