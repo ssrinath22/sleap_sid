@@ -23,9 +23,13 @@ jobs:
         include:
           # Use this condarc as default
           - condarc: .conda/condarc.yaml
+          - platform: linux
           # Use special condarc if macos
           - os: "macos-latest"
             condarc: .conda_mac/condarc.yaml
+            platform: osx
+          - os: "windows-2022"
+            platform: win
     steps:
       # Setup
       - uses: actions/checkout@v2
@@ -88,7 +92,44 @@ jobs:
         shell: bash -l {0}
         run: |
           conda build .conda_mac --output-folder build
+      
+      # Upload artifact "upload" can use it
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: sleap-conda-package
+          path: build/${{ matrix.platform }}-64/*.tar.bz2
+          retention-days: 1
+      
+  upload:
+    name: Upload packages ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-22.04", "windows-2022", "macos-latest"]
+        # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstrategymatrixinclude
+        include:
+          # Use this condarc as default
+          - condarc: .conda/condarc.yaml
+          - platform: linux
+          # Use special condarc if macos
+          - os: "macos-latest"
+            condarc: .conda_mac/condarc.yaml
+            platform: osx
+          - os: "windows-2022"
+            platform: win
+    steps:
+      # Download wheel
+      - name: Download wheel artifact
+        uses: actions/download-artifact@v3
+        id: download
+        with:
+          name: sleap-conda-package
+          path: build/${{ matrix.platform }}-64
 
+
+      # Setup
       # Login to conda (Ubuntu)
       - name: Login to Anaconda (Ubuntu)
         if: matrix.os == 'ubuntu-22.04'
